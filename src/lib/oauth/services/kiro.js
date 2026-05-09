@@ -257,29 +257,33 @@ export class KiroService {
    * List available models from CodeWhisperer API
    */
   async listAvailableModels(accessToken, profileArn) {
-    const endpoint = "https://codewhisperer.us-east-1.amazonaws.com";
-    const target = "AmazonCodeWhispererService.ListAvailableModels";
+    const endpoint = "https://q.us-east-1.amazonaws.com/ListAvailableModels";
+    const params = new URLSearchParams({ origin: "AI_EDITOR" });
+    if (profileArn) params.set("profileArn", profileArn);
 
-    const response = await fetch(endpoint, {
-      method: "POST",
+    const url = `${endpoint}?${params}`;
+
+    // Use undici request directly to control User-Agent (Next.js fetch strips it)
+    const { request } = require("undici");
+    const { statusCode, body } = await request(url, {
+      method: "GET",
       headers: {
-        "Content-Type": "application/x-amz-json-1.0",
-        "x-amz-target": target,
         "Authorization": `Bearer ${accessToken}`,
         "Accept": "application/json",
+        "User-Agent": "aws-sdk-js/1.0.27 ua/2.1 os/win32#10.0.19044 lang/js md/nodejs#22.21.1 api/codewhispererstreaming#1.0.27 m/E KiroIDE-0.7.45",
+        "x-amz-user-agent": "aws-sdk-js/1.0.27 KiroIDE-0.7.45",
+        "x-amzn-kiro-agent-mode": "vibe",
       },
-      body: JSON.stringify({
-        origin: "AI_EDITOR",
-        profileArn,
-      }),
     });
+    const text = await body.text();
+    const response = { ok: statusCode === 200, status: statusCode, text: () => text, json: () => JSON.parse(text) };
 
     if (!response.ok) {
-      const error = await response.text();
+      const error = response.text();
       throw new Error(`Failed to list models: ${error}`);
     }
 
-    const data = await response.json();
+    const data = response.json();
     return (data.models || []).map(m => ({
       id: m.modelId,
       name: m.modelName || m.modelId,

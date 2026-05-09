@@ -296,8 +296,9 @@ export async function GET(request, { params }) {
         const profileArn = connection.providerSpecificData?.profileArn;
         const accessToken = connection.accessToken;
         const refreshToken = connection.refreshToken;
+        console.log(`[Kiro Models] Token starts: ${accessToken?.substring(0, 30)}, profileArn: ${profileArn}`);
 
-        if (accessToken && profileArn) {
+        if (accessToken) {
           try {
             const models = await kiroService.listAvailableModels(accessToken, profileArn);
             return NextResponse.json({
